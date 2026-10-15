@@ -1,0 +1,51 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             Int      @id @default(autoincrement())
+  email          String   @unique
+  passwordHash   String   @map("password_hash")
+  /// Bumped on sign-out: every token issued before is rejected from then on.
+  sessionVersion Int      @default(0) @map("session_version")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("users")
+}
+
+/// One row per calendar day. Money is stored as NUMERIC(12,2), never float.
+model DailyMetric {
+  id             Int      @id @default(autoincrement())
+  date           DateTime @unique @db.Date
+  posRevenue     Decimal  @map("pos_revenue") @db.Decimal(12, 2)
+  eatclubRevenue Decimal  @map("eatclub_revenue") @db.Decimal(12, 2)
+  labourCost     Decimal  @map("labour_cost") @db.Decimal(12, 2)
+  covers         Int
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("daily_metrics")
+}
+
+enum EventImpact {
+  positive
+  negative
+}
+
+/// Something that happened on a given day and moved the numbers (shown as a marker on the chart).
+model Event {
+  id          Int         @id @default(autoincrement())
+  date        DateTime    @db.Date
+  impact      EventImpact
+  title       String      @db.VarChar(120)
+  description String?     @db.VarChar(500)
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  @@index([date])
+  @@map("events")
+}
