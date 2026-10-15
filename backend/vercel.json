@@ -1,0 +1,6 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "express",
+  "regions": ["sin1"],
+  "crons": [{ "path": "/api/cron/reset-demo", "schedule": "1 17 * * *" }]
+}
