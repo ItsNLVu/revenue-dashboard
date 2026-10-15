@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+/* Palette sampled from the reference video */
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --color-page: #f6f4f0;
+  --color-surface: #fdfdfd;
+  --color-subtle: #f5f4f1;
+  --color-line: #e3e1dc;
+  --color-ink: #282828;
+  --color-muted: #6b6b6b;
+
+  --color-pos: #282828;
+  --color-eatclub: #5759ed;
+  --color-labour: #eb6427;
+  --color-prev-direct: #bbbbbb;
+  --color-prev-total: #c8cafa;
+  --color-prev-labour: #f6ccbb;
+
+  --color-accent: #f4ca3d;
+  --color-accent-strong: #e9bc25;
+  --color-up: #16a34a;
+  --color-down: #dc2626;
+}
+
+body {
+  background: var(--color-page);
+  color: var(--color-ink);
+}
+
+/* Recharts focuses the chart wrapper on click; keep the outline for keyboard users only */
+.recharts-wrapper:focus:not(:focus-visible),
+.recharts-surface:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Event markers appear once the bars have finished growing */
+.event-marker {
+  animation: marker-in 250ms ease-out 350ms both;
+}
+
+@keyframes marker-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .event-marker {
+    animation: none;
+  }
+}
