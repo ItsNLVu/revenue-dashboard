@@ -5,6 +5,7 @@ import { config } from "./config";
 import { errorHandler, notFound } from "./middleware/error";
 import { adminRouter } from "./routes/admin";
 import { authRouter } from "./routes/auth";
+import { cronRouter } from "./routes/cron";
 import { dashboardRouter } from "./routes/dashboard";
 
 export function createApp() {
@@ -27,9 +28,14 @@ export function createApp() {
   app.use("/api/auth", authRouter);
   app.use("/api/dashboard", dashboardRouter);
   app.use("/api/admin", adminRouter);
+  app.use("/api/cron", cronRouter);
 
   app.use(notFound);
   app.use(errorHandler);
 
   return app;
 }
+
+// Vercel runs the Express app exported by default from src/app.ts (zero-config Express).
+// Locally the API is started by src/index.ts instead.
+export default createApp();

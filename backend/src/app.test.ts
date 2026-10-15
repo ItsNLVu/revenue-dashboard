@@ -30,6 +30,20 @@ describe("API guards", () => {
     expect(res.headers["cache-control"]).toBe("no-store");
   });
 
+  it("keeps the demo reset route disabled unless CRON_SECRET is set, and checks the secret", async () => {
+    delete process.env.CRON_SECRET;
+    expect((await request(app).get("/api/cron/reset-demo")).status).toBe(404);
+
+    process.env.CRON_SECRET = "s3cret";
+    try {
+      expect((await request(app).get("/api/cron/reset-demo")).status).toBe(401);
+      const wrong = await request(app).get("/api/cron/reset-demo").set("Authorization", "Bearer nope");
+      expect(wrong.status).toBe(401);
+    } finally {
+      delete process.env.CRON_SECRET;
+    }
+  });
+
   it("returns JSON errors for unknown routes", async () => {
     const res = await request(app).get("/api/unknown");
     expect(res.status).toBe(404);

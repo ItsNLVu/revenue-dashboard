@@ -35,6 +35,14 @@ describe("week helpers", () => {
   });
 
   it("uses local date parts for today", () => {
-    expect(todayIso(new Date(2026, 0, 5, 23, 30))).toBe("2026-01-05");
+    expect(todayIso(new Date(2026, 0, 5, 23, 30), undefined)).toBe("2026-01-05");
+  });
+
+  it("can follow a business timezone instead of the server's", () => {
+    // 20:00 UTC on Sunday is already Monday morning in Vietnam (UTC+7)
+    const sundayEveningUtc = new Date(Date.UTC(2026, 9, 18, 20, 0));
+    expect(todayIso(sundayEveningUtc, "UTC")).toBe("2026-10-18");
+    expect(todayIso(sundayEveningUtc, "Asia/Ho_Chi_Minh")).toBe("2026-10-19");
+    expect(mondayOf(todayIso(sundayEveningUtc, "Asia/Ho_Chi_Minh"))).toBe("2026-10-19");
   });
 });

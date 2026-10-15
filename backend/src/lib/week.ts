@@ -37,8 +37,12 @@ export function weekDates(weekStart: string): string[] {
   return DAY_LABELS.map((_, i) => addDays(weekStart, i));
 }
 
-/** Today's date in the server's local timezone. */
-export function todayIso(now = new Date()): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+/**
+ * Today's date in the business timezone: APP_TIMEZONE (e.g. "Asia/Ho_Chi_Minh") when set,
+ * otherwise the server's local timezone. Hosting platforms usually run in UTC, so setting it
+ * keeps "this week" aligned with the restaurant's own calendar.
+ */
+export function todayIso(now = new Date(), timeZone = process.env.APP_TIMEZONE || undefined): string {
+  // en-CA formats as YYYY-MM-DD
+  return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
 }
