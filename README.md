@@ -2,6 +2,8 @@
 
 A weekly **Revenue Trend** card (rebuilt from the reference video), an **admin area** to manage the data behind it, and a **REST API** that serves exactly what the admin saved.
 
+**Live demo:** https://revenue-dashboard-longvu.vercel.app (admin at [/admin](https://revenue-dashboard-longvu.vercel.app/admin), credentials sent separately). The demo data is reset every night, so feel free to edit anything. Everything below also runs locally, see [Install and run on a fresh machine](#install-and-run-on-a-fresh-machine).
+
 | Dashboard | Compare to previous week |
 | --- | --- |
 | ![Dashboard](docs/dashboard.png) | ![Compare mode](docs/dashboard-compare.png) |
@@ -18,8 +20,9 @@ A weekly **Revenue Trend** card (rebuilt from the reference video), an **admin a
 6. [API](#api)
 7. [Data model](#data-model)
 8. [Decisions and assumptions](#decisions-and-assumptions)
-9. [Troubleshooting](#troubleshooting)
-10. [What I would add next](#what-i-would-add-next)
+9. [Deployment (live demo)](#deployment-live-demo)
+10. [Troubleshooting](#troubleshooting)
+11. [What I would add next](#what-i-would-add-next)
 
 ## What is included
 
@@ -59,8 +62,8 @@ revenue-dashboard/
 │   │   ├── migrations/      SQL migrations (applied with `npm run db:migrate`)
 │   │   └── seed.ts          admin user + 4 weeks of demo data
 │   └── src/
-│       ├── routes/          auth, dashboard (public), admin (protected)
-│       ├── lib/             week maths, totals/percentages, data access
+│       ├── routes/          auth, dashboard (public), admin (protected), cron (demo reset)
+│       ├── lib/             week maths, totals/percentages, data access, demo data
 │       └── middleware/      auth guard, error handler
 ├── frontend/                Next.js app (dashboard + admin)
 │   ├── src/app/             pages: /, /admin/login, /admin
@@ -332,13 +335,27 @@ One row per day keeps the admin simple and lets any week, or the previous one, b
 - **Exact data, no randomness.** In the reference video the numbers change every time "Compare to Previous" is clicked (16,977, then 16,469, 16,110...), so the demo uses random data. The task asks that the frontend reflects *exactly* what the admin saved, so here all numbers come from the database, toggling never changes or refetches them (an e2e test checks this), and API responses are never cached.
 - **Seed = the video.** The current and previous seeded weeks reproduce the figures visible in the video: $15,974 vs $14,982 (+6.6%), $2,282 vs $2,140, 871 vs 820 covers (+6.2%).
 - **Formulas.** Revenue = POS + Eatclub (labour is a cost, not revenue). Average per day = revenue / number of days entered. Percentages are rounded to one decimal and shown as "n/a" when the previous value is 0. Totals are computed on the backend in integer cents, so the dashboard and the API can never disagree.
-- **Previous period** = the 7 days before. Weeks run Monday to Sunday. "Current week" is decided by the backend's local date (the frontend never guesses it).
+- **Previous period** = the 7 days before. Weeks run Monday to Sunday. "Current week" is decided by the backend only (the frontend never guesses it), in `APP_TIMEZONE` when set (the live demo uses `Asia/Ho_Chi_Minh`), otherwise in the server's timezone.
 - **Weeks in progress.** A day is either fully filled in or left empty (= no data yet, not $0). Empty days get no bars and say "No data entered" in the tooltip. If only Mon to Wed are entered, the comparison uses Mon to Wed of the previous week, so the KPIs do not show a fake drop in the middle of the week; the card says "3 of 7 days entered so far".
 - **Legend names.** The video labels the previous week's series "Direct Revenue (Previous)" and "Total Revenue (Previous)". I kept those legend labels to match the design; they are the previous week's POS and Eatclub figures, and the tooltip uses the plain names ("POS Revenue", "Eatclub Revenue") to avoid confusion.
 - **Concurrent edits.** Saving a week takes a per-week lock in Postgres, so overlapping saves cannot deadlock or mix two versions. The form sends the version it loaded; if someone else saved in between, the API answers `409` and the form offers to load the latest numbers instead of silently overwriting them.
 - **Y axis** uses "nice" steps (2,905 rounds up to 3k in 0.75k steps, as in the video) computed from both weeks. That way the axis does not jump when series are toggled.
 - **Security.** Admin routes are protected on the server; the Next.js redirect is only a convenience. The cookie is httpOnly + SameSite=Lax (+ Secure with `NODE_ENV=production`). Each request checks the token against the user's `session_version`, so signing out (or deleting the user) invalidates every token at once. The login does not reveal whether an email exists, and after login it only redirects inside `/admin`.
 - The four tabs under the card in the video (Period Comparison, Year-over-Year, ...) belong to another part of that page and are out of scope.
+
+## Deployment (live demo)
+
+| Part | Where | Notes |
+| --- | --- | --- |
+| Frontend | Vercel project `revenue-dashboard` (root `frontend/`, region Singapore) | `API_URL` points to the API project; `/api/*` is proxied to it, so the session cookie stays first-party |
+| API | Vercel project `revenue-dashboard-api` (root `backend/`, region Singapore) | Zero-config Express: Vercel runs the app exported by default from `src/app.ts` |
+| Database | Neon PostgreSQL, AWS Singapore | The API uses the pooled connection string (`pgbouncer=true`); migrations ran with the direct one |
+
+Environment variables of the API project: `DATABASE_URL`, `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `APP_TIMEZONE`, `CRON_SECRET`. The demo admin password is not the one in `.env.example`.
+
+`backend/vercel.json` schedules a daily [Vercel Cron](https://vercel.com/docs/cron-jobs) call to `GET /api/cron/reset-demo` (00:01 Vietnam time, within Hobby's 1 hour window). It puts the demo weeks back for the current week and removes whatever visitors changed. The route only exists when `CRON_SECRET` is set and checks the `Authorization: Bearer <CRON_SECRET>` header that Vercel sends, so it is disabled locally.
+
+To deploy your own copy: create a Neon database, run `npm run db:migrate` and `npm run db:seed` against it, then deploy `backend/` and `frontend/` as two Vercel projects with the variables above (`vercel deploy --prod` in each folder). The whole e2e suite also runs against the live URL: `E2E_BASE_URL=<url> E2E_ADMIN_PASSWORD=<password> npm run test:e2e`.
 
 ## Troubleshooting
 
